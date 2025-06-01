@@ -39,7 +39,6 @@ public class BancoDeDados {
             PrintWriter out = new PrintWriter(socket.getOutputStream(), true)
         ) {
             String linhaRecebida = in.readLine();
-            System.out.println("Recebido: " + linhaRecebida);
 
             if (linhaRecebida != null && linhaRecebida.startsWith("CONSULTAR:")) {
                 String regiaoDesejada = linhaRecebida.split(":", 2)[1].trim().toUpperCase();

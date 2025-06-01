@@ -84,15 +84,21 @@ public class Servidor {
             BufferedReader in = new BufferedReader(new InputStreamReader(socketUsuario.getInputStream()));
             PrintWriter out = new PrintWriter(socketUsuario.getOutputStream(), true)
         ) {
+            String identificador = in.readLine();
+            if (identificador == null || identificador.trim().isEmpty()) {
+                identificador = "Desconhecido_" + socketUsuario.getInetAddress().getHostAddress();
+            }
+
             String entrada;
             while ((entrada = in.readLine()) != null) {
                 if (entrada.equalsIgnoreCase("sair")) {
                     out.println("Conexão encerrada pelo cliente.");
+                    registrarLog("[" + identificador + "] encerrou a conexão.");
                     break;
                 }
 
                 String regiao = entrada.trim().toUpperCase();
-                System.out.println("Usuário solicitou dados da região: " + regiao);
+                registrarLog("[" + identificador + "] solicitou dados da região: " + regiao);
 
                 try (
                     Socket socketBD = new Socket(HOST_BD, PORTA_BD);
@@ -111,25 +117,31 @@ public class Servidor {
                     }
 
                     if (!encontrou) {
-                        out.println("Nenhum dado encontrado para a região: " + regiao);
-                        out.flush();
+                        String msg = "Nenhum dado encontrado para a região: " + regiao;
+                        out.println(msg);
+                        registrarLog("[" + identificador + "] " + msg);
+                    } else {
+                        registrarLog("[" + identificador + "] recebeu dados da região: " + regiao);
                     }
 
                     out.println("__FIM__");
                     out.flush();
 
                 } catch (IOException e) {
-                    System.out.println("Erro ao consultar dados no BD: " + e.getMessage());
+                    String erro = "Erro ao consultar dados no BD: " + e.getMessage();
+                    registrarLog("[" + identificador + "] " + erro);
                     out.println("Erro ao consultar dados no banco de dados.");
                 }
             }
 
         } catch (IOException e) {
+            registrarLog("Erro na comunicação com o usuário: " + e.getMessage());
             e.printStackTrace();
         } finally {
             conexoesAtivas.decrementAndGet();
         }
     }
+
 
     private void processarDado(String dado) {
         System.out.println("Processando dado: " + dado);
@@ -173,4 +185,19 @@ public class Servidor {
     private String formatarParaBase(String[] dados, String regiao) {
         return "[" + regiao + "] [" + dados[2] + "//" + dados[3] + "//" + dados[0] + "//" + dados[1] + "]";
     }
+    
+    private void registrarLog(String mensagem) {
+        try {
+            String nomeArquivo = "logs/servidor.log";
+            try (FileWriter fw = new FileWriter(nomeArquivo, true);
+                 BufferedWriter bw = new BufferedWriter(fw);
+                 PrintWriter out = new PrintWriter(bw)) {
+                String timestamp = java.time.LocalDateTime.now().toString();
+                out.println("[" + timestamp + "] " + mensagem);
+            }
+        } catch (IOException e) {
+            System.out.println("Erro ao registrar log: " + e.getMessage());
+        }
+    }
+
 }
