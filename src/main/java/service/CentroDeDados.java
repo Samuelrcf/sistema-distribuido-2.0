@@ -15,46 +15,76 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttClient;
+import org.eclipse.paho.client.mqttv3.MqttClientPersistence;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.eclipse.paho.client.mqttv3.persist.MqttDefaultFilePersistence;
 
 public class CentroDeDados implements MqttCallback {
 	private final String brokerUrl = "tcp://localhost:1883";
 	private final String topic = "clima";
 	private MqttClient client;
+	private MqttClientPersistence persistence = new MqttDefaultFilePersistence("/tmp/mqtt");
 
 	private final String MULTICAST_IP = "239.0.0.1";
 	private final int MULTICAST_PORT = 4446;
 
 	private final int PORTA_USUARIO = 5000;
 
-	private final List<ServidorInfo> servidores = Arrays.asList(new ServidorInfo("localhost", 6001, 1),
-			new ServidorInfo("localhost", 6002, 2));
+	private final List<ServidorInfo> servidores = Arrays.asList(new ServidorInfo("localhost", 6001),
+			new ServidorInfo("localhost", 6002));
 
-	private final ExecutorService executorUsuarios = Executors.newCachedThreadPool();
+	private final ExecutorService executor = Executors.newCachedThreadPool();
 
-	private final List<ServidorStatus> respostasRecentes = Collections.synchronizedList(new ArrayList<>());
+	private final List<ServidorStatus> respostasRecentes = new ArrayList<>();
 	
-	private final Map<Socket, Integer> estrategiaPorUsuario = new ConcurrentHashMap<>();
 	private final AtomicInteger rrIndex = new AtomicInteger(0);
 
 	public CentroDeDados() {
 		iniciarMQTT();
 		escutarUsuarios();
 		iniciarRecebimentoDeStatus(); 
+	}
+	
+	// mqtt
+	private void iniciarMQTT() {
+		try {
+			client = new MqttClient(brokerUrl, MqttClient.generateClientId(), persistence);
+			MqttConnectOptions options = new MqttConnectOptions();
+			options.setAutomaticReconnect(true);
+			options.setCleanSession(true);
+			client.setCallback(this);
+			client.connect(options);
+			client.subscribe(topic);
+			System.out.println("Centro de Dados inscrito no tópico: " + topic);
+		} catch (MqttException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	private void escutarUsuarios() {
+		Executors.newSingleThreadExecutor().execute(() -> {
+			try (ServerSocket serverSocket = new ServerSocket(PORTA_USUARIO)) {
+				System.out.println("Centro de Dados escutando usuários na porta " + PORTA_USUARIO);
+				while (true) {
+					Socket socket = serverSocket.accept();
+					executor.execute(() -> lidarComUsuario(socket));
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		});
 	}
 
 	private void iniciarRecebimentoDeStatus() {
@@ -63,7 +93,7 @@ public class CentroDeDados implements MqttCallback {
 				System.out.println("Aguardando status dos servidores na porta 5500...");
 				while (true) {
 					Socket s = statusSocket.accept();
-					executorUsuarios.execute(() -> {
+					executor.execute(() -> {
 						try (BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream()))) {
 							String linha = in.readLine(); // ex: localhost:6001;3;1
 							if (linha != null) {
@@ -86,22 +116,6 @@ public class CentroDeDados implements MqttCallback {
 		});
 	}
 
-	// === Parte MQTT ===
-	private void iniciarMQTT() {
-		try {
-			client = new MqttClient(brokerUrl, MqttClient.generateClientId());
-			MqttConnectOptions options = new MqttConnectOptions();
-			options.setAutomaticReconnect(true);
-			options.setCleanSession(true);
-			client.setCallback(this);
-			client.connect(options);
-			client.subscribe(topic);
-			System.out.println("Centro de Dados inscrito no tópico: " + topic);
-		} catch (MqttException e) {
-			e.printStackTrace();
-		}
-	}
-
 	@Override
 	public void messageArrived(String topic, MqttMessage message) {
 		String dado = new String(message.getPayload());
@@ -120,105 +134,93 @@ public class CentroDeDados implements MqttCallback {
 		}
 	}
 
-	// === Parte Socket com Usuário ===
-	private void escutarUsuarios() {
-		Executors.newSingleThreadExecutor().execute(() -> {
-			try (ServerSocket serverSocket = new ServerSocket(PORTA_USUARIO)) {
-				System.out.println("Centro de Dados escutando usuários na porta " + PORTA_USUARIO);
-				while (true) {
-					Socket socket = serverSocket.accept();
-					executorUsuarios.execute(() -> lidarComUsuario(socket));
-				}
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		});
-	}
-
 	private void lidarComUsuario(Socket socketUsuario) {
 	    try (
 	        BufferedReader in = new BufferedReader(new InputStreamReader(socketUsuario.getInputStream()));
 	        PrintWriter out = new PrintWriter(socketUsuario.getOutputStream(), true)
 	    ) {
-	        // ✅ Identificação do usuário
-	        String identificador = in.readLine();
-	        String ip = socketUsuario.getInetAddress().getHostAddress();
-	        registrarLog("[" + identificador + "] " + identificador + " (" + ip + ") conectado.");
-
-	        String estrategia = in.readLine(); 
-	        int tipoBalanceamento = estrategia.equals("2") ? 2 : 1;
-	        estrategiaPorUsuario.put(socketUsuario, tipoBalanceamento);
-	        registrarLog("[" + identificador + "] " + " escolheu algoritmo: " +
-	                     (tipoBalanceamento == 1 ? "Weighted Least Connections" : "Round-Robin"));
-
-	        String clientRequest = in.readLine();
-	        while (clientRequest != null && !clientRequest.equals("1") && !clientRequest.equals("0")) {
-	            out.println("Comando inválido.");
-	            clientRequest = in.readLine();
-	        }
+	        String identificador = identificarUsuario(in, socketUsuario);
+	        int tipoBalanceamento = obterEstrategiaBalanceamento(in, socketUsuario, identificador);
+	        String clientRequest = aguardarComandoUsuario(in, out);
 
 	        if ("1".equals(clientRequest)) {
-	            registrarLog("[" + identificador + "] " + " iniciou a consulta.");
-
-	            // Filtrar servidores disponíveis
-	            List<ServidorInfo> servidoresDisponiveis = new ArrayList<>();
-	            for (ServidorInfo servidor : servidores) {
-	                if (verificarDisponibilidade(servidor.host, servidor.porta)) {
-	                    servidoresDisponiveis.add(servidor);
-	                }
-	            }
-
-	            if (servidoresDisponiveis.isEmpty()) {
-	                out.println("Nenhum servidor disponível no momento.");
-	                registrarLog("[" + identificador + "] " + ": Nenhum servidor disponível.");
-	                return;
-	            }
-
-	            solicitarStatusDosServidores();
-
-	            try {
-	                Thread.sleep(1000);
-	            } catch (InterruptedException e) {
-	                e.printStackTrace();
-	            }
-
-	            List<ServidorStatus> respostasFiltradas;
-	            synchronized (respostasRecentes) {
-	                respostasFiltradas = new ArrayList<>(respostasRecentes);
-	                respostasRecentes.clear();
-	            }
-
-	            if (respostasFiltradas.isEmpty()) {
-	                out.println("Nenhuma resposta dos servidores.");
-	                registrarLog("[" + identificador + "] " + ": Nenhuma resposta dos servidores.");
-	                return;
-	            }
-
-	            int tipo = estrategiaPorUsuario.getOrDefault(socketUsuario, 1);
-	            ServidorInfo escolhido;
-	            if (tipo == 1) {
-	                escolhido = escolherWLC(respostasFiltradas);
-	            } else {
-	                escolhido = escolherRoundRobin(respostasFiltradas);
-	            }
-
-	            out.println(escolhido.host + ":" + escolhido.porta);
-	            registrarLog("[" + identificador + "] " + " foi direcionado para " +
-	                         escolhido.host + ":" + escolhido.porta);
-
+	            processarConsulta(out, socketUsuario, tipoBalanceamento, identificador);
 	        } else if ("0".equals(clientRequest)) {
 	            out.println("Conexão encerrada.");
-	            registrarLog("[" + identificador + "] " + " encerrou a conexão.");
+	            registrarLog("[" + identificador + "] encerrou a conexão.");
 	        }
-
-	        socketUsuario.close();
 
 	    } catch (IOException e) {
 	        e.printStackTrace();
 	    }
 	}
 
+	private String identificarUsuario(BufferedReader in, Socket socket) throws IOException {
+	    String identificador = in.readLine();
+	    String ip = socket.getInetAddress().getHostAddress();
+	    registrarLog("[" + identificador + "] " + " (" + ip + ") conectado.");
+	    return identificador;
+	}
 
+	private int obterEstrategiaBalanceamento(BufferedReader in, Socket socket, String identificador) throws IOException {
+	    String estrategia = in.readLine(); 
+	    int tipo = estrategia.equals("2") ? 2 : 1; // colocar wlc (mais elegante) caso o usuário n escolha round-robin explicitamente 
+	    registrarLog("[" + identificador + "] escolheu algoritmo: " +
+	                (tipo == 1 ? "Weighted Least Connections" : "Round-Robin"));
+	    return tipo;
+	}
+
+	private String aguardarComandoUsuario(BufferedReader in, PrintWriter out) throws IOException {
+	    String comando = in.readLine();
+	    while (comando != null && !comando.equals("1") && !comando.equals("0")) {
+	        out.println("Comando inválido.");
+	        comando = in.readLine();
+	    }
+	    return comando;
+	}
+
+	private void processarConsulta(PrintWriter out, Socket socket, int tipo, String identificador) {
+	    registrarLog("[" + identificador + "] iniciou a consulta.");
+
+	    List<ServidorInfo> servidoresDisponiveis = servidores.stream()
+	        .filter(s -> verificarDisponibilidade(s.host, s.porta))
+	        .collect(Collectors.toList());
+
+	    if (servidoresDisponiveis.isEmpty()) {
+	        out.println("Nenhum servidor disponível no momento.");
+	        registrarLog("[" + identificador + "] Nenhum servidor disponível.");
+	        return;
+	    }
+
+	    synchronized (this) {
+	    	solicitarStatusDosServidores();
+		    try {
+		        Thread.sleep(1000);
+		        
+		        if(respostasRecentes.isEmpty()){
+			        out.println("Nenhuma resposta dos servidores.");
+			        registrarLog("[" + identificador + "] Nenhuma resposta dos servidores.");
+			        return;
+		        }
+		        
+		        ServidorInfo escolhido;
+		        
+		        if (tipo == 1) {
+		            escolhido = escolherWLC(respostasRecentes);
+		        } else {
+		            escolhido = escolherRoundRobin(respostasRecentes);
+		        }
+		        
+			    out.println(escolhido.host + ":" + escolhido.porta);
+			    registrarLog("[" + identificador + "] foi direcionado para " + escolhido.host + ":" + escolhido.porta);
+
+		    } catch (InterruptedException e) {
+		        e.printStackTrace();
+		    }
+	    }
+
+	}
+	
 	private void solicitarStatusDosServidores() {
 		enviarViaMulticast("STATUS?");
 	}
@@ -235,14 +237,14 @@ public class CentroDeDados implements MqttCallback {
 	private ServidorInfo escolherWLC(List<ServidorStatus> servidores) {
 	    return servidores.stream()
 	        .min(Comparator.comparingInt(s -> s.conexoes * s.peso))
-	        .map(s -> new ServidorInfo(s.host, s.porta, s.peso))
+	        .map(s -> new ServidorInfo(s.host, s.porta))
 	        .orElseThrow(); 
 	}
 
 	private ServidorInfo escolherRoundRobin(List<ServidorStatus> servidores) {
 	    int index = rrIndex.getAndIncrement() % servidores.size();
 	    ServidorStatus s = servidores.get(index);
-	    return new ServidorInfo(s.host, s.porta, s.peso);
+	    return new ServidorInfo(s.host, s.porta);
 	}
 
 	@Override
@@ -271,16 +273,14 @@ public class CentroDeDados implements MqttCallback {
 	    }
 	}
 
-	// === Classes auxiliares ===
+	// classes auxiliares
 	static class ServidorInfo {
 		String host;
 		int porta;
-		int peso;
 
-		ServidorInfo(String host, int porta, int peso) {
+		ServidorInfo(String host, int porta) {
 			this.host = host;
 			this.porta = porta;
-			this.peso = peso;
 		}
 	}
 

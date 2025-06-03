@@ -1,35 +1,40 @@
 package drone.starter;
 
-import drone.Drone;
-import drone.enums.Regiao;
-
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import drone.Drone;
+import drone.enums.Regiao;
+
 public class DroneStarter {
     public static void main(String[] args) {
-        ExecutorService executor = Executors.newFixedThreadPool(4); 
+        int qtdDrones = 4;
+        ExecutorService executor = Executors.newFixedThreadPool(qtdDrones);
+        CountDownLatch latch = new CountDownLatch(qtdDrones);
 
         try {
-            executor.execute(new Drone(Regiao.NORTE));
-            executor.execute(new Drone(Regiao.SUL));
-            executor.execute(new Drone(Regiao.LESTE));
-            executor.execute(new Drone(Regiao.OESTE));
+            executor.execute(new Drone(Regiao.NORTE, latch));
+            executor.execute(new Drone(Regiao.SUL, latch));
+            executor.execute(new Drone(Regiao.LESTE, latch));
+            executor.execute(new Drone(Regiao.OESTE, latch));
 
             System.out.println("Drones iniciados.");
 
-            executor.shutdown();
-            if (!executor.awaitTermination(1, TimeUnit.MINUTES)) {
-                System.out.println("Encerrando coletas...");
-                executor.shutdownNow(); 
-            }
+            TimeUnit.SECONDS.sleep(60);
 
-            System.out.println("Execução encerrada.");
+            executor.shutdownNow();
+
+            latch.await();
+
+            System.out.println("Todos os drones foram encerrados.");
+            
+            System.exit(0);
 
         } catch (Exception e) {
             e.printStackTrace();
-            executor.shutdownNow(); 
+            executor.shutdownNow();
         }
     }
 }

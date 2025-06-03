@@ -1,7 +1,7 @@
 package usuario;
 
 @FunctionalInterface
-public interface ConsultaDrone {
+public interface DadosClimaticos {
     void solicitarDados();
 }
 

@@ -4,7 +4,7 @@ import java.io.*;
 import java.net.Socket;
 import java.util.Scanner;
 
-public class Usuario implements ConsultaDrone {
+public class Usuario implements DadosClimaticos {
 
     private final String hostCentroDados;
     private final int portaCentroDados;
@@ -43,7 +43,7 @@ public class Usuario implements ConsultaDrone {
     }
 
     private void escolherBalanceamento(PrintWriter outCentro) {
-        System.out.print("Escolha o algoritmo de balanceamento:\n[1] Weighted Score\n[2] Round-Robin\n> ");
+        System.out.print("Escolha o algoritmo de balanceamento:\n[1] WLC\n[2] Round-Robin\n> ");
         String tipoBalanceamento = scanner.nextLine().trim();
         outCentro.println(tipoBalanceamento);
     }
@@ -51,7 +51,7 @@ public class Usuario implements ConsultaDrone {
     private String menuUsuario(PrintWriter outCentro, BufferedReader inCentro) throws IOException {
         String conexao;
         do {
-            System.out.print("[1] - Iniciar \n[0] - Sair\n");
+            System.out.print("[1] - Iniciar \n[0] - Sair\n>");
             String comando = scanner.nextLine().trim();
             outCentro.println(comando);
 
@@ -96,7 +96,7 @@ public class Usuario implements ConsultaDrone {
 
                 String resposta;
                 while ((resposta = servidorIn.readLine()) != null) {
-                    if (resposta.equals("__FIM__")) break;
+                    if (resposta.equals("FIM")) break;
                     System.out.println("Resposta do servidor: " + resposta);
                 }
             }

@@ -1,0 +1,20 @@
+[2025-06-02T21:36:39.045372900] [samuel] samuel (127.0.0.1) conectado.
+[2025-06-02T21:36:42.776660100] [samuel] escolheu algoritmo: Weighted Least Connections
+[2025-06-02T21:36:46.939885100] [rogenes] rogenes (127.0.0.1) conectado.
+[2025-06-02T21:36:49.736002100] [rogenes] escolheu algoritmo: Weighted Least Connections
+[2025-06-02T21:36:55.689226400] [samuel] iniciou a consulta.
+[2025-06-02T21:36:56.711782400] [samuel] foi direcionado para localhost:7001
+[2025-06-02T21:37:00.752995] [rogenes] iniciou a consulta.
+[2025-06-02T21:37:01.767068400] [rogenes] foi direcionado para localhost:7001
+[2025-06-02T21:39:33.735326400] [samuel]  (127.0.0.1) conectado.
+[2025-06-02T21:39:34.895167200] [samuel] escolheu algoritmo: Weighted Least Connections
+[2025-06-02T21:39:35.718693300] [samuel] iniciou a consulta.
+[2025-06-02T21:39:36.751390400] [samuel] foi direcionado para localhost:7001
+[2025-06-02T21:39:44.128067600] [rogenes]  (127.0.0.1) conectado.
+[2025-06-02T21:39:44.527585] [rogenes] escolheu algoritmo: Weighted Least Connections
+[2025-06-02T21:39:45.159744500] [rogenes] iniciou a consulta.
+[2025-06-02T21:39:46.163635] [rogenes] foi direcionado para localhost:7001
+[2025-06-02T21:39:53.016661] [freire]  (127.0.0.1) conectado.
+[2025-06-02T21:39:53.871850800] [freire] escolheu algoritmo: Weighted Least Connections
+[2025-06-02T21:39:54.512021] [freire] iniciou a consulta.
+[2025-06-02T21:39:55.527180200] [freire] foi direcionado para localhost:7001

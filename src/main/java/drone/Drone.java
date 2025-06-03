@@ -2,6 +2,7 @@ package drone;
 
 import java.util.Locale;
 import java.util.Random;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.paho.client.mqttv3.MqttClient;
@@ -15,10 +16,12 @@ public class Drone implements Runnable {
     private final Regiao regiao;
     private final MqttClient client;
     private final Random random = new Random();
+    private final CountDownLatch latch;
     private final String brokerUrl = "tcp://localhost:1883";
 
-    public Drone(Regiao regiao) throws MqttException {
+    public Drone(Regiao regiao, CountDownLatch latch) throws MqttException {
         this.regiao = regiao;
+        this.latch = latch;
         this.client = new MqttClient(brokerUrl, MqttClient.generateClientId());
         MqttConnectOptions options = new MqttConnectOptions();
         options.setAutomaticReconnect(true);
@@ -29,7 +32,7 @@ public class Drone implements Runnable {
     @Override
     public void run() {
         try {
-            while (!Thread.currentThread().isInterrupted()) {
+            while (!Thread.currentThread().isInterrupted()) { // enquanto n chegar no shutdownNow ela continua enviando dados
                 double pressao = 950 + random.nextDouble() * 100;
                 double radiacao = 100 + random.nextDouble() * 900;
                 double temperatura = -10 + random.nextDouble() * 50;
@@ -46,11 +49,16 @@ public class Drone implements Runnable {
 
                 TimeUnit.SECONDS.sleep(2 + random.nextInt(4));
             }
+            
+            client.disconnect();
+            client.close();
         } catch (InterruptedException e) {
             System.out.println("Drone " + regiao + " interrompido.");
-            Thread.currentThread().interrupt();
+            Thread.currentThread().interrupt(); 
         } catch (MqttException e) {
             e.printStackTrace();
+        } finally {
+            latch.countDown(); 
         }
     }
 
@@ -68,5 +76,4 @@ public class Drone implements Runnable {
                 throw new IllegalArgumentException("Região inválida: " + regiao);
         }
     }
-
 }

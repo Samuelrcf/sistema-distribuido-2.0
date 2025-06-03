@@ -110,7 +110,7 @@ public class Servidor {
                     boolean encontrou = false;
                     String linha;
                     while ((linha = inBD.readLine()) != null) {
-                        if (linha.equals("__FIM__")) break;
+                        if (linha.equals("FIM")) break;
                         out.println(linha);
                         out.flush();
                         encontrou = true;
@@ -124,7 +124,7 @@ public class Servidor {
                         registrarLog("[" + identificador + "] recebeu dados da região: " + regiao);
                     }
 
-                    out.println("__FIM__");
+                    out.println("FIM");
                     out.flush();
 
                 } catch (IOException e) {

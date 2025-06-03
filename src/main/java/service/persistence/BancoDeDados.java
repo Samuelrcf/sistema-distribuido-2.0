@@ -62,7 +62,6 @@ public class BancoDeDados {
 
             while ((linhaArquivo = reader.readLine()) != null) {
                 if (linhaArquivo.toUpperCase().startsWith("[" + regiaoDesejada + "]")) {
-                    System.out.println("Encontrado: " + linhaArquivo);
                     out.println(linhaArquivo);
                     encontrou = true;
                 }
@@ -71,12 +70,12 @@ public class BancoDeDados {
             if (!encontrou) {
                 out.println("Nenhum dado encontrado para: " + regiaoDesejada);
             }
-            out.println("__FIM__");
+            out.println("FIM");
 
         } catch (IOException e) {
             System.out.println("Erro ao ler arquivo: " + e.getMessage());
             out.println("Erro ao acessar o banco de dados.");
-            out.println("__FIM__");
+            out.println("FIM");
         }
     }
 

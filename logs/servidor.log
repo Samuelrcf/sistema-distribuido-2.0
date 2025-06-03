@@ -1,0 +1,15 @@
+[2025-06-02T21:36:58.323043600] [samuel] solicitou dados da região: NORTE
+[2025-06-02T21:36:58.342047500] [samuel] recebeu dados da região: NORTE
+[2025-06-02T21:37:04.616997] [rogenes] solicitou dados da região: OESTE
+[2025-06-02T21:37:04.624960200] [rogenes] recebeu dados da região: OESTE
+[2025-06-02T21:37:07.088988] [rogenes] encerrou a conexão.
+[2025-06-02T21:37:10.640744100] [samuel] encerrou a conexão.
+[2025-06-02T21:39:38.734631200] [samuel] solicitou dados da região: SUL
+[2025-06-02T21:39:38.744038] [samuel] recebeu dados da região: SUL
+[2025-06-02T21:39:47.823701900] [rogenes] solicitou dados da região: NORTE
+[2025-06-02T21:39:47.829698800] [rogenes] recebeu dados da região: NORTE
+[2025-06-02T21:39:56.598932700] [freire] solicitou dados da região: OESTE
+[2025-06-02T21:39:56.607934900] [freire] recebeu dados da região: OESTE
+[2025-06-02T21:43:19.158253] Erro na comunicação com o usuário: Connection reset
+[2025-06-02T21:43:19.256829800] Erro na comunicação com o usuário: Connection reset
+[2025-06-02T21:43:19.340255100] Erro na comunicação com o usuário: Connection reset
