@@ -42,19 +42,21 @@ public class CentroDeDados implements MqttCallback {
 
 	private final int PORTA_USUARIO = 5000;
 
-	private final List<ServidorInfo> servidores = Arrays.asList(new ServidorInfo("localhost", 6001),
-			new ServidorInfo("localhost", 6002));
+	private final List<ServidorInfo> servidores = Arrays.asList(new ServidorInfo("localhost", 7001),
+			new ServidorInfo("localhost", 7002));
 
 	private final ExecutorService executor = Executors.newCachedThreadPool();
 
-	private final List<ServidorStatus> respostasRecentes = new ArrayList<>();
+	private final List<ServidorStatus> statusServidor = new ArrayList<>();
 	
 	private final AtomicInteger rrIndex = new AtomicInteger(0);
+	
+	private final List<ServidorStatus> rrList = new ArrayList<>();
 
 	public CentroDeDados() {
 		iniciarMQTT();
 		escutarUsuarios();
-		iniciarRecebimentoDeStatus(); 
+		receberStatus(); 
 	}
 	
 	// mqtt
@@ -87,7 +89,7 @@ public class CentroDeDados implements MqttCallback {
 		});
 	}
 
-	private void iniciarRecebimentoDeStatus() {
+	private void receberStatus() {
 		Executors.newSingleThreadExecutor().execute(() -> {
 			try (ServerSocket statusSocket = new ServerSocket(5500)) {
 				System.out.println("Aguardando status dos servidores na porta 5500...");
@@ -103,7 +105,7 @@ public class CentroDeDados implements MqttCallback {
 								int porta = Integer.parseInt(hostEPorta[1]);
 								int conexoes = Integer.parseInt(partes[1]);
 								int peso = Integer.parseInt(partes[2]);
-								respostasRecentes.add(new ServidorStatus(host, porta, conexoes, peso));
+								statusServidor.add(new ServidorStatus(host, porta, conexoes, peso));
 							}
 						} catch (IOException e) {
 							e.printStackTrace();
@@ -164,7 +166,7 @@ public class CentroDeDados implements MqttCallback {
 
 	private int obterEstrategiaBalanceamento(BufferedReader in, Socket socket, String identificador) throws IOException {
 	    String estrategia = in.readLine(); 
-	    int tipo = estrategia.equals("2") ? 2 : 1; // colocar wlc (mais elegante) caso o usuário n escolha round-robin explicitamente 
+	    int tipo = estrategia.equals("2") ? 2 : 1; 
 	    registrarLog("[" + identificador + "] escolheu algoritmo: " +
 	                (tipo == 1 ? "Weighted Least Connections" : "Round-Robin"));
 	    return tipo;
@@ -197,7 +199,7 @@ public class CentroDeDados implements MqttCallback {
 		    try {
 		        Thread.sleep(1000);
 		        
-		        if(respostasRecentes.isEmpty()){
+		        if(statusServidor.isEmpty()){
 			        out.println("Nenhuma resposta dos servidores.");
 			        registrarLog("[" + identificador + "] Nenhuma resposta dos servidores.");
 			        return;
@@ -206,9 +208,9 @@ public class CentroDeDados implements MqttCallback {
 		        ServidorInfo escolhido;
 		        
 		        if (tipo == 1) {
-		            escolhido = escolherWLC(respostasRecentes);
+		            escolhido = escolherWLC(statusServidor);
 		        } else {
-		            escolhido = escolherRoundRobin(respostasRecentes);
+		            escolhido = escolherRoundRobin(statusServidor);
 		        }
 		        
 			    out.println(escolhido.host + ":" + escolhido.porta);
@@ -216,6 +218,8 @@ public class CentroDeDados implements MqttCallback {
 
 		    } catch (InterruptedException e) {
 		        e.printStackTrace();
+		    }finally {
+		    	statusServidor.clear();
 		    }
 	    }
 
@@ -242,8 +246,13 @@ public class CentroDeDados implements MqttCallback {
 	}
 
 	private ServidorInfo escolherRoundRobin(List<ServidorStatus> servidores) {
-	    int index = rrIndex.getAndIncrement() % servidores.size();
-	    ServidorStatus s = servidores.get(index);
+		rrList.clear();
+	    rrList.addAll(servidores.stream()
+	        .sorted(Comparator.comparing(s -> s.host + ":" + s.porta))
+	        .toList());
+
+	    int index = rrIndex.getAndIncrement() % rrList.size();
+	    ServidorStatus s = rrList.get(index);
 	    return new ServidorInfo(s.host, s.porta);
 	}
 

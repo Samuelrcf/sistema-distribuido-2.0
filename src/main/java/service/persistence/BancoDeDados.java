@@ -1,10 +1,20 @@
 package service.persistence;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class BancoDeDados {
 
@@ -55,20 +65,29 @@ public class BancoDeDados {
         }
     }
 
-    private void processarConsulta(PrintWriter out, String regiaoDesejada) {
+    private void processarConsulta(PrintWriter out, String consulta) {
         try (BufferedReader reader = new BufferedReader(new FileReader(arquivoSaida))) {
             String linhaArquivo;
             boolean encontrou = false;
 
             while ((linhaArquivo = reader.readLine()) != null) {
-                if (linhaArquivo.toUpperCase().startsWith("[" + regiaoDesejada + "]")) {
-                    out.println(linhaArquivo);
-                    encontrou = true;
+                String linhaUpper = linhaArquivo.toUpperCase();
+
+                if (consulta.startsWith("BUSCAR_")) {
+                    if (verificarFiltro(consulta, linhaUpper)) {
+                        out.println(linhaArquivo);
+                        encontrou = true;
+                    }
+                } else {
+                    if (linhaUpper.startsWith("[" + consulta + "]")) {
+                        out.println(linhaArquivo);
+                        encontrou = true;
+                    }
                 }
             }
 
             if (!encontrou) {
-                out.println("Nenhum dado encontrado para: " + regiaoDesejada);
+                out.println("Nenhum dado encontrado para: " + consulta);
             }
             out.println("FIM");
 
@@ -77,6 +96,42 @@ public class BancoDeDados {
             out.println("Erro ao acessar o banco de dados.");
             out.println("FIM");
         }
+    }
+    
+    private boolean verificarFiltro(String consulta, String linha) {
+        Map<String, Integer> indices = Map.of(
+            "T", 0, "U", 1, "P", 2, "R", 3
+        );
+
+        Pattern padrao = Pattern.compile("BUSCAR_([TUPR])(_([A-Z]+))?:([\\d.]+)(:([\\d.]+))?");
+        Matcher matcher = padrao.matcher(consulta);
+
+        if (matcher.matches()) {
+            String campo = matcher.group(1);
+            String regiaoFiltro = matcher.group(3);
+            double min = Double.parseDouble(matcher.group(4));
+            double max = matcher.group(6) != null ? Double.parseDouble(matcher.group(6)) : Double.MAX_VALUE;
+
+            String[] partes = linha.split("]");
+            String regiao = partes[0].replace("[", "").trim();
+            String[] valores = partes[1].trim().replace("[", "").replace("]", "").split("//");
+
+            if (regiaoFiltro != null && !regiao.equalsIgnoreCase(regiaoFiltro)) {
+                return false;
+            }
+
+            int index = indices.getOrDefault(campo, -1);
+            if (index == -1 || index >= valores.length) return false;
+
+            try {
+                double valorCampo = Double.parseDouble(valores[index]);
+                return valorCampo >= min && valorCampo <= max;
+            } catch (NumberFormatException e) {
+                return false;
+            }
+        }
+
+        return false;
     }
 
     private synchronized void salvarDado(String linha) {

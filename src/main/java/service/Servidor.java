@@ -111,7 +111,9 @@ public class Servidor {
                     String linha;
                     while ((linha = inBD.readLine()) != null) {
                         if (linha.equals("FIM")) break;
-                        out.println(linha);
+
+                        String dadosFormatados = formatarDadosClimaticos(linha);
+                        out.println(dadosFormatados);
                         out.flush();
                         encontrou = true;
                     }
@@ -184,6 +186,28 @@ public class Servidor {
 
     private String formatarParaBase(String[] dados, String regiao) {
         return "[" + regiao + "] [" + dados[2] + "//" + dados[3] + "//" + dados[0] + "//" + dados[1] + "]";
+    }
+    
+    private String formatarDadosClimaticos(String linha) {
+        try {
+            int primeiraAbre = linha.indexOf('[');
+            int primeiraFecha = linha.indexOf(']');
+            int segundaAbre = linha.indexOf('[', primeiraFecha);
+            int segundaFecha = linha.indexOf(']', segundaAbre);
+
+            String regiao = linha.substring(primeiraAbre + 1, primeiraFecha).trim();
+            String dados = linha.substring(segundaAbre + 1, segundaFecha).trim();
+
+            String[] partes = dados.split("//");
+            if (partes.length != 4) return "Formato inválido de dados.";
+
+            return String.format(
+                "[%s]\nTemperatura: %s°C\nUmidade: %s%%\nPressão: %s hPa\nRadiação: %s W/m²",
+                regiao, partes[0], partes[1], partes[2], partes[3]
+            );
+        } catch (Exception e) {
+            return "Erro ao interpretar os dados climáticos: " + linha;
+        }
     }
     
     private void registrarLog(String mensagem) {
