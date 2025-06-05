@@ -30,7 +30,7 @@ import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 
 public class CentroDeDados implements MqttCallback {
-	private final String brokerUrl = "tcp://localhost:1883";
+	private final String brokerUrl = "tcp://test.mosquitto.org";
 	private final String topic = "clima";
 	private MqttClient client;
 

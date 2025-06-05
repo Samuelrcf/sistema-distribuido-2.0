@@ -17,7 +17,7 @@ public class Drone implements Runnable {
     private final MqttClient client;
     private final Random random = new Random();
     private final CountDownLatch latch;
-    private final String brokerUrl = "tcp://localhost:1883";
+    private final String brokerUrl = "tcp://test.mosquitto.org";
 
     public Drone(Regiao regiao, CountDownLatch latch) throws MqttException {
         this.regiao = regiao;
