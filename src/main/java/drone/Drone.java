@@ -31,6 +31,8 @@ public class Drone implements Runnable {
 
     @Override
     public void run() {
+    	String topico = "clima";
+    	MqttMessage mensagem;
         try {
             while (!Thread.currentThread().isInterrupted()) { // enquanto n chegar no shutdownNow ela continua enviando dados
                 double pressao = 950 + random.nextDouble() * 100;
@@ -39,9 +41,8 @@ public class Drone implements Runnable {
                 double umidade = 10 + random.nextDouble() * 90;
 
                 String dadoFormatado = formatarDados(pressao, radiacao, temperatura, umidade);
-                String topico = "clima";
-
-                MqttMessage mensagem = new MqttMessage(dadoFormatado.getBytes());
+                
+                mensagem = new MqttMessage(dadoFormatado.getBytes());
                 mensagem.setQos(1);
                 client.publish(topico, mensagem);
 
@@ -49,6 +50,9 @@ public class Drone implements Runnable {
 
                 TimeUnit.SECONDS.sleep(2 + random.nextInt(4));
             }
+            
+            mensagem = new MqttMessage("FIM".getBytes());
+            client.publish(topico, mensagem);
             
             client.disconnect();
             client.close();

@@ -1,8 +1,20 @@
 package service;
 
-import java.io.*;
-import java.net.*;
-import java.util.concurrent.*;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.DatagramPacket;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.MulticastSocket;
+import java.net.NetworkInterface;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Servidor {
@@ -163,8 +175,8 @@ public class Servidor {
     private void enviarParaBD(String dadoFormatado) {
         try (Socket socket = new Socket(HOST_BD, PORTA_BD);
             PrintWriter out = new PrintWriter(socket.getOutputStream(), true)) {
-            out.println(dadoFormatado);
-        } catch (IOException e) {
+        	out.println(dadoFormatado);
+        } catch (Exception e) {
             System.out.println("Erro ao enviar para BD: " + e.getMessage());
         }
     }

@@ -22,7 +22,7 @@ public class DroneStarter {
 
             System.out.println("Drones iniciados.");
 
-            TimeUnit.SECONDS.sleep(60);
+            TimeUnit.SECONDS.sleep(10);
 
             executor.shutdownNow();
 

@@ -91,7 +91,7 @@ public class Usuario implements DadosClimaticos {
 			exibirInstrucoesDeBusca();
 
 			while (true) {
-				System.out.print("\nDigite uma região ou comando de busca: ");
+				System.out.print("\nDigite uma região ou comando de busca (Digite 'sair' para encerrar): ");
 				String novaEntrada = scanner.nextLine().trim();
 				servidorOut.println(novaEntrada);
 

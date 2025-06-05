@@ -25,17 +25,14 @@ import java.util.stream.Collectors;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttClient;
-import org.eclipse.paho.client.mqttv3.MqttClientPersistence;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
-import org.eclipse.paho.client.mqttv3.persist.MqttDefaultFilePersistence;
 
 public class CentroDeDados implements MqttCallback {
 	private final String brokerUrl = "tcp://localhost:1883";
 	private final String topic = "clima";
 	private MqttClient client;
-	private MqttClientPersistence persistence = new MqttDefaultFilePersistence("/tmp/mqtt");
 
 	private final String MULTICAST_IP = "239.0.0.1";
 	private final int MULTICAST_PORT = 4446;
@@ -59,10 +56,9 @@ public class CentroDeDados implements MqttCallback {
 		receberStatus(); 
 	}
 	
-	// mqtt
 	private void iniciarMQTT() {
 		try {
-			client = new MqttClient(brokerUrl, MqttClient.generateClientId(), persistence);
+			client = new MqttClient(brokerUrl, MqttClient.generateClientId());
 			MqttConnectOptions options = new MqttConnectOptions();
 			options.setAutomaticReconnect(true);
 			options.setCleanSession(true);
