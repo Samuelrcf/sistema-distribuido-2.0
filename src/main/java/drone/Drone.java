@@ -13,71 +13,82 @@ import org.eclipse.paho.client.mqttv3.MqttMessage;
 import drone.enums.Regiao;
 
 public class Drone implements Runnable {
-    private final Regiao regiao;
-    private final MqttClient client;
-    private final Random random = new Random();
-    private final CountDownLatch latch;
-    private final String brokerUrl = "tcp://test.mosquitto.org";
+	private final Regiao regiao;
+	private final MqttClient client;
+	private final Random random = new Random();
+	private final CountDownLatch latch;
+	private final String brokerUrl = "tcp://test.mosquitto.org:1883";
+	private volatile boolean running = true;
 
-    public Drone(Regiao regiao, CountDownLatch latch) throws MqttException {
-        this.regiao = regiao;
-        this.latch = latch;
-        this.client = new MqttClient(brokerUrl, MqttClient.generateClientId());
-        MqttConnectOptions options = new MqttConnectOptions();
-        options.setAutomaticReconnect(true);
-        options.setCleanSession(true);
-        client.connect(options);
-    }
+	public Drone(Regiao regiao, CountDownLatch latch) throws MqttException {
+		this.regiao = regiao;
+		this.latch = latch;
+		this.client = new MqttClient(brokerUrl, MqttClient.generateClientId());
+		MqttConnectOptions options = new MqttConnectOptions();
+		options.setAutomaticReconnect(true);
+		options.setCleanSession(true);
+		client.connect(options);
+	}
 
-    @Override
-    public void run() {
-    	String topico = "clima";
-    	MqttMessage mensagem;
-        try {
-            while (!Thread.currentThread().isInterrupted()) { // enquanto n chegar no shutdownNow ela continua enviando dados
-                double pressao = 950 + random.nextDouble() * 100;
-                double radiacao = 100 + random.nextDouble() * 900;
-                double temperatura = -10 + random.nextDouble() * 50;
-                double umidade = 10 + random.nextDouble() * 90;
+	@Override
+	public void run() {
+		String topicoRegiao = "dados_climaticos/" + regiao.name().toLowerCase();
+		String topicoTodos = "dados_climaticos/todos";
+		try {
+			while (running) {
+				double pressao = 950 + random.nextDouble() * 100;
+				double radiacao = 100 + random.nextDouble() * 900;
+				double temperatura = -10 + random.nextDouble() * 50;
+				double umidade = 10 + random.nextDouble() * 90;
 
-                String dadoFormatado = formatarDados(pressao, radiacao, temperatura, umidade);
-                
-                mensagem = new MqttMessage(dadoFormatado.getBytes());
-                mensagem.setQos(1);
-                client.publish(topico, mensagem);
+				String dadoFormatado = formatarDados(pressao, radiacao, temperatura, umidade);
 
-                System.out.println("Drone " + regiao + " publicou: " + dadoFormatado);
+				MqttMessage mensagem = new MqttMessage(dadoFormatado.getBytes());
+				mensagem.setQos(0);
+				
+				client.publish(topicoRegiao, mensagem);
 
-                TimeUnit.SECONDS.sleep(2 + random.nextInt(4));
-            }
-            
-            mensagem = new MqttMessage("FIM".getBytes());
-            client.publish(topico, mensagem);
-            
-            client.disconnect();
-            client.close();
-        } catch (InterruptedException e) {
-            System.out.println("Drone " + regiao + " interrompido.");
-            Thread.currentThread().interrupt(); 
-        } catch (MqttException e) {
-            e.printStackTrace();
-        } finally {
-            latch.countDown(); 
-        }
-    }
+				client.publish(topicoTodos, mensagem);
 
-    private String formatarDados(double pressao, double radiacao, double temperatura, double umidade) {
-        switch (regiao) {
-            case NORTE:
-                return String.format(Locale.US, "%.2f_%.2f_%.2f_%.2f", pressao, radiacao, temperatura, umidade);
-            case SUL:
-                return String.format(Locale.US, "(%.2f;%.2f;%.2f;%.2f)", pressao, radiacao, temperatura, umidade);
-            case LESTE:
-                return String.format(Locale.US, "{%.2f,%.2f,%.2f,%.2f}", pressao, radiacao, temperatura, umidade);
-            case OESTE:
-                return String.format(Locale.US, "%.2f#%.2f#%.2f#%.2f", pressao, radiacao, temperatura, umidade);
-            default:
-                throw new IllegalArgumentException("Região inválida: " + regiao);
-        }
-    }
+				System.out.println("Drone " + regiao + " publicou: " + dadoFormatado);
+
+				TimeUnit.SECONDS.sleep(2 + random.nextInt(4));
+			}
+
+		} catch (InterruptedException e) {
+			System.out.println("Drone " + regiao + " interrompido durante sleep.");
+			Thread.currentThread().interrupt();
+		} catch (MqttException e) {
+			e.printStackTrace();
+		} finally {
+			latch.countDown();
+		}
+	}
+
+	public void stop() {
+		running = false;
+		try {
+			if (client.isConnected()) {
+				client.disconnect();
+			}
+			client.close();
+		} catch (MqttException e) {
+			e.printStackTrace();
+		}
+	}
+
+	private String formatarDados(double pressao, double radiacao, double temperatura, double umidade) {
+		switch (regiao) {
+		case NORTE:
+			return String.format(Locale.US, "%.2f_%.2f_%.2f_%.2f", pressao, radiacao, temperatura, umidade);
+		case SUL:
+			return String.format(Locale.US, "(%.2f;%.2f;%.2f;%.2f)", pressao, radiacao, temperatura, umidade);
+		case LESTE:
+			return String.format(Locale.US, "{%.2f,%.2f,%.2f,%.2f}", pressao, radiacao, temperatura, umidade);
+		case OESTE:
+			return String.format(Locale.US, "%.2f#%.2f#%.2f#%.2f", pressao, radiacao, temperatura, umidade);
+		default:
+			throw new IllegalArgumentException("Região inválida: " + regiao);
+		}
+	}
 }

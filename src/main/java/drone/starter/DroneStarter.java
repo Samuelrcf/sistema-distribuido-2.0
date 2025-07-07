@@ -5,36 +5,46 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import org.eclipse.paho.client.mqttv3.MqttException;
+
 import drone.Drone;
 import drone.enums.Regiao;
 
 public class DroneStarter {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
         int qtdDrones = 4;
         ExecutorService executor = Executors.newFixedThreadPool(qtdDrones);
         CountDownLatch latch = new CountDownLatch(qtdDrones);
 
+        Drone[] drones = new Drone[qtdDrones];
+
         try {
-            executor.execute(new Drone(Regiao.NORTE, latch));
-            executor.execute(new Drone(Regiao.SUL, latch));
-            executor.execute(new Drone(Regiao.LESTE, latch));
-            executor.execute(new Drone(Regiao.OESTE, latch));
+            drones[0] = new Drone(Regiao.NORTE, latch);
+            drones[1] = new Drone(Regiao.SUL, latch);
+            drones[2] = new Drone(Regiao.LESTE, latch);
+			drones[3] = new Drone(Regiao.OESTE, latch);
+		} catch (MqttException e) {
+			e.printStackTrace();
+		}
 
-            System.out.println("Drones iniciados.");
-
-            TimeUnit.SECONDS.sleep(10);
-
-            executor.shutdownNow();
-
-            latch.await();
-
-            System.out.println("Todos os drones foram encerrados.");
-            
-            System.exit(0);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            executor.shutdownNow();
+        for (Drone drone : drones) {
+            executor.execute(drone);
         }
+
+        System.out.println("Drones iniciados.");
+
+        TimeUnit.SECONDS.sleep(10);
+
+        for (Drone drone : drones) {
+            drone.stop();
+        }
+
+        executor.shutdown();
+        executor.awaitTermination(15, TimeUnit.SECONDS);
+
+        latch.await();
+
+        System.out.println("Todos os drones foram encerrados.");
     }
 }
+
