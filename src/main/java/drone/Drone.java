@@ -10,6 +10,7 @@ import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 
+import constants.GlobalConstants;
 import drone.enums.Regiao;
 
 public class Drone implements Runnable {
@@ -17,23 +18,21 @@ public class Drone implements Runnable {
 	private final MqttClient client;
 	private final Random random = new Random();
 	private final CountDownLatch latch;
-	private final String brokerUrl = "tcp://test.mosquitto.org:1883";
 	private volatile boolean running = true;
 
 	public Drone(Regiao regiao, CountDownLatch latch) throws MqttException {
 		this.regiao = regiao;
 		this.latch = latch;
-		this.client = new MqttClient(brokerUrl, MqttClient.generateClientId());
+		this.client = new MqttClient(GlobalConstants.BROKER, MqttClient.generateClientId());
 		MqttConnectOptions options = new MqttConnectOptions();
 		options.setAutomaticReconnect(true);
-		options.setCleanSession(true);
+		options.setCleanSession(false);
 		client.connect(options);
 	}
 
 	@Override
 	public void run() {
-		String topicoRegiao = "dados_climaticos/" + regiao.name().toLowerCase();
-		String topicoTodos = "dados_climaticos/todos";
+		String topico = "dados_climaticos";
 		try {
 			while (running) {
 				double pressao = 950 + random.nextDouble() * 100;
@@ -44,11 +43,9 @@ public class Drone implements Runnable {
 				String dadoFormatado = formatarDados(pressao, radiacao, temperatura, umidade);
 
 				MqttMessage mensagem = new MqttMessage(dadoFormatado.getBytes());
-				mensagem.setQos(0);
+				mensagem.setQos(1);
 				
-				client.publish(topicoRegiao, mensagem);
-
-				client.publish(topicoTodos, mensagem);
+				client.publish(topico, mensagem);
 
 				System.out.println("Drone " + regiao + " publicou: " + dadoFormatado);
 

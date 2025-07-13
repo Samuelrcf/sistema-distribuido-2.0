@@ -13,7 +13,7 @@ import com.rabbitmq.client.DeliverCallback;
 
 public class ConsumidorRabbitMQ {
 
-	private static final String ARQUIVO_DADOS = "dados/dados_recebidos.txt";
+	private static final String ARQUIVO_DADOS = "rabbitmq/dados_recebidos.txt";
 
     public static void main(String[] args) throws Exception {
         Scanner scanner = new Scanner(System.in);
@@ -73,7 +73,7 @@ public class ConsumidorRabbitMQ {
     }
 
     private static void salvarEmArquivo(String dado) {
-        File dir = new File("dados");
+        File dir = new File("rabbitmq");
         if (!dir.exists()) {
             dir.mkdirs(); // cria o diretório se não existir
         }
@@ -85,7 +85,6 @@ public class ConsumidorRabbitMQ {
              PrintWriter out = new PrintWriter(bw)) {
 
             out.println(dado);
-            System.out.println("Salvo em arquivo: " + dado);
 
         } catch (IOException e) {
             System.out.println("Erro ao salvar no arquivo: " + e.getMessage());

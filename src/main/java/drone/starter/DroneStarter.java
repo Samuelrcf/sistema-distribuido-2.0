@@ -33,14 +33,14 @@ public class DroneStarter {
 
         System.out.println("Drones iniciados.");
 
-        TimeUnit.SECONDS.sleep(10);
+        TimeUnit.SECONDS.sleep(30);
 
         for (Drone drone : drones) {
             drone.stop();
         }
 
         executor.shutdown();
-        executor.awaitTermination(15, TimeUnit.SECONDS);
+        executor.awaitTermination(10, TimeUnit.SECONDS);
 
         latch.await();
 

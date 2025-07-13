@@ -1,18 +1,24 @@
 package ui;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Scanner;
 
 import org.eclipse.paho.client.mqttv3.IMqttMessageListener;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
+import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
+
+import constants.GlobalConstants;
 
 public class Dashboard {
 
-	private static final String BROKER = "tcp://test.mosquitto.org:1883";
 	private static final String TOPICO = "dados_processados/todos";
-
+	private static final String ARQUIVO_DADOS = "banco_6001.txt"; // exemplo
 	private static int totalMensagens = 0;
 
 	private static final Map<String, Double> somaTemperatura = new HashMap<>();
@@ -26,24 +32,59 @@ public class Dashboard {
 	private static final Map<String, Integer> totalRadiacao = new HashMap<>();
 
 	public static void main(String[] args) throws Exception {
-		MqttClient client = new MqttClient(BROKER, MqttClient.generateClientId());
+		Scanner scanner = new Scanner(System.in);
+		System.out.println("Escolha uma opção:");
+		System.out.println("1 - Acompanhar dados em tempo real (MQTT)");
+		System.out.println("2 - Processar dados históricos do banco (arquivo)");
+		System.out.print("Opção: ");
+		int escolha = scanner.nextInt();
+		scanner.nextLine(); // consumir \n
+
+		if (escolha == 1) {
+			iniciarMQTT();
+		} else if (escolha == 2) {
+			processarArquivo(ARQUIVO_DADOS);
+			exibirDashboard();
+		} else {
+			System.out.println("Opção inválida.");
+		}
+
+		scanner.close();
+	}
+
+	private static void iniciarMQTT() throws MqttException {
+		MqttClient client = new MqttClient(GlobalConstants.BROKER, "dashboard");
 		MqttConnectOptions options = new MqttConnectOptions();
 		options.setAutomaticReconnect(true);
-		options.setCleanSession(true);
+		options.setCleanSession(false);
 
 		client.connect(options);
 		System.out.println("Dashboard MQTT conectado ao broker.");
 
 		client.subscribe(TOPICO, new IMqttMessageListener() {
-			@Override
-			public void messageArrived(String topic, MqttMessage msg) throws Exception {
-				String dado = new String(msg.getPayload());
-				System.out.println("Dado: " + dado);
-				System.out.println("Tópico: " + topic);
-				processarDado(dado);
-				exibirDashboard();
-			}
+		    @Override
+		    public void messageArrived(String topic, MqttMessage msg) throws Exception {
+		        String dado = new String(msg.getPayload());
+		        System.out.println("Dado recebido: " + dado);
+		        processarDado(dado);
+		        exibirDashboard();
+		    }
 		});
+
+	}
+
+	private static void processarArquivo(String caminhoArquivo) {
+		System.out.println("Lendo dados do arquivo: " + caminhoArquivo);
+		try (BufferedReader br = new BufferedReader(new FileReader(caminhoArquivo))) {
+			String linha;
+			while ((linha = br.readLine()) != null) {
+				if (!linha.isBlank()) {
+					processarDado(linha);
+				}
+			}
+		} catch (IOException e) {
+			System.out.println("Erro ao ler arquivo: " + e.getMessage());
+		}
 	}
 
 	private static void processarDado(String dado) {
@@ -57,7 +98,7 @@ public class Dashboard {
 			double pressao = Double.parseDouble(valores[2].trim().replace(",", "."));
 			double radiacao = Double.parseDouble(valores[3].trim().replace(",", "."));
 
-			totalMensagens = totalMensagens + 4;
+			totalMensagens += 4;
 
 			somaTemperatura.merge(regiao, temperatura, Double::sum);
 			somaUmidade.merge(regiao, umidade, Double::sum);
@@ -70,12 +111,12 @@ public class Dashboard {
 			totalRadiacao.merge(regiao, 1, Integer::sum);
 
 		} catch (Exception e) {
-			System.out.println("Erro ao processar dado: " + dado);
+			System.out.println("Erro ao processar dado: " + e);
 		}
 	}
 
 	private static void exibirDashboard() {
-		System.out.println("\n=========== DASHBOARD MQTT ===========");
+		System.out.println("\n=========== DASHBOARD CLIMÁTICO ===========");
 		System.out.println("Total de dados recebidos: " + totalMensagens);
 
 		int qtdTemp = totalTemperatura.values().stream().mapToInt(Integer::intValue).sum();
@@ -101,7 +142,7 @@ public class Dashboard {
 		exibirPercentuais("Pressão", mediasPres);
 		exibirPercentuais("Radiação", mediasRad);
 
-		System.out.println("======================================\n");
+		System.out.println("===========================================\n");
 	}
 
 	private static Map<String, Double> calcularMedias(Map<String, Double> soma, Map<String, Integer> contagem) {
@@ -125,5 +166,4 @@ public class Dashboard {
 			System.out.printf("%s: %.2f%% (média: %.2f)\n", regiao, percentual, media);
 		}
 	}
-
 }
