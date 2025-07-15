@@ -53,7 +53,7 @@ public class Dashboard {
 	}
 
 	private static void iniciarMQTT() throws MqttException {
-		MqttClient client = new MqttClient(GlobalConstants.BROKER, "dashboard");
+		MqttClient client = new MqttClient(GlobalConstants.BROKER_MQTT, "dashboard");
 		MqttConnectOptions options = new MqttConnectOptions();
 		options.setAutomaticReconnect(true);
 		options.setCleanSession(false);

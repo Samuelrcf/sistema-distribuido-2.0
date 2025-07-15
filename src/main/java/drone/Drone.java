@@ -20,13 +20,15 @@ public class Drone implements Runnable {
 	private final CountDownLatch latch;
 	private volatile boolean running = true;
 
-	public Drone(Regiao regiao, CountDownLatch latch) throws MqttException {
+	public Drone(Regiao regiao, CountDownLatch latch, String broker_id) throws MqttException {
 		this.regiao = regiao;
 		this.latch = latch;
-		this.client = new MqttClient(GlobalConstants.BROKER, MqttClient.generateClientId());
+		this.client = new MqttClient(GlobalConstants.BROKER_MQTT, broker_id);
 		MqttConnectOptions options = new MqttConnectOptions();
 		options.setAutomaticReconnect(true);
 		options.setCleanSession(false);
+		options.setKeepAliveInterval(10);
+		options.setConnectionTimeout(5);
 		client.connect(options);
 	}
 
@@ -35,28 +37,37 @@ public class Drone implements Runnable {
 		String topico = "dados_climaticos";
 		try {
 			while (running) {
-				double pressao = 950 + random.nextDouble() * 100;
-				double radiacao = 100 + random.nextDouble() * 900;
-				double temperatura = -10 + random.nextDouble() * 50;
-				double umidade = 10 + random.nextDouble() * 90;
+				try {
+					if (!client.isConnected()) { // em vez de implementar o callback, faço manualmente
+						System.out.println("Drone " + regiao + " desconectado. Aguardando reconexão...");
+						TimeUnit.SECONDS.sleep(10); // aguarda reconexão automática
+						continue;
+					}
 
-				String dadoFormatado = formatarDados(pressao, radiacao, temperatura, umidade);
+					double pressao = 950 + random.nextDouble() * 100;
+					double radiacao = 100 + random.nextDouble() * 900;
+					double temperatura = -10 + random.nextDouble() * 50;
+					double umidade = 10 + random.nextDouble() * 90;
 
-				MqttMessage mensagem = new MqttMessage(dadoFormatado.getBytes());
-				mensagem.setQos(1);
-				
-				client.publish(topico, mensagem);
+					String dadoFormatado = formatarDados(pressao, radiacao, temperatura, umidade);
+					MqttMessage mensagem = new MqttMessage(dadoFormatado.getBytes());
+					mensagem.setQos(1);
 
-				System.out.println("Drone " + regiao + " publicou: " + dadoFormatado);
+					client.publish(topico, mensagem);
 
-				TimeUnit.SECONDS.sleep(2 + random.nextInt(4));
+					System.out.println("Drone " + regiao + " publicou: " + dadoFormatado);
+
+					TimeUnit.SECONDS.sleep(2 + random.nextInt(4));
+
+				} catch (MqttException e) {
+					System.out.println("Erro de publicação - Drone " + regiao + ": " + e.getMessage());
+					TimeUnit.SECONDS.sleep(2); // espera antes de tentar de novo
+				}
 			}
 
 		} catch (InterruptedException e) {
 			System.out.println("Drone " + regiao + " interrompido durante sleep.");
 			Thread.currentThread().interrupt();
-		} catch (MqttException e) {
-			e.printStackTrace();
 		} finally {
 			latch.countDown();
 		}

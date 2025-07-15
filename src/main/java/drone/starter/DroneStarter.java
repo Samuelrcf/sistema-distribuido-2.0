@@ -19,10 +19,10 @@ public class DroneStarter {
         Drone[] drones = new Drone[qtdDrones];
 
         try {
-            drones[0] = new Drone(Regiao.NORTE, latch);
-            drones[1] = new Drone(Regiao.SUL, latch);
-            drones[2] = new Drone(Regiao.LESTE, latch);
-			drones[3] = new Drone(Regiao.OESTE, latch);
+            drones[0] = new Drone(Regiao.NORTE, latch, "drone1");
+            drones[1] = new Drone(Regiao.SUL, latch, "drone2");
+            drones[2] = new Drone(Regiao.LESTE, latch, "drone3");
+			drones[3] = new Drone(Regiao.OESTE, latch, "drone4");
 		} catch (MqttException e) {
 			e.printStackTrace();
 		}
@@ -33,14 +33,13 @@ public class DroneStarter {
 
         System.out.println("Drones iniciados.");
 
-        TimeUnit.SECONDS.sleep(30);
+        TimeUnit.SECONDS.sleep(20);
 
         for (Drone drone : drones) {
             drone.stop();
         }
 
         executor.shutdown();
-        executor.awaitTermination(10, TimeUnit.SECONDS);
 
         latch.await();
 

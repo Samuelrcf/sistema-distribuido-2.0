@@ -36,7 +36,7 @@ public class ConsumidorMQTT {
         }
 
         try {
-            MqttClient client = new MqttClient(GlobalConstants.BROKER, "client-mqtt-1");
+            MqttClient client = new MqttClient(GlobalConstants.BROKER_MQTT, "client-mqtt-1");
             MqttConnectOptions options = new MqttConnectOptions();
             options.setAutomaticReconnect(true);
             options.setCleanSession(false);

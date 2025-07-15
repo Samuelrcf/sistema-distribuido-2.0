@@ -44,11 +44,13 @@ public class CentroDeDados implements MqttCallback {
 			
 			String tmp = System.getProperty("java.io.tmpdir");
 			MqttClientPersistence persistence = new MqttDefaultFilePersistence(tmp);
-			client = new MqttClient(GlobalConstants.BROKER, "centro_de_dados", persistence);
+			client = new MqttClient(GlobalConstants.BROKER_MQTT, "centro_de_dados", persistence);
 
 			MqttConnectOptions options = new MqttConnectOptions();
 			options.setAutomaticReconnect(true);
 			options.setCleanSession(false);
+			options.setKeepAliveInterval(10);
+			options.setConnectionTimeout(5);
 			client.setCallback(this);
 			client.connect(options);
 			client.subscribe("dados_climaticos"); // assina todos os sub-tópicos
@@ -84,7 +86,7 @@ public class CentroDeDados implements MqttCallback {
 
 	private void iniciarPublicadorMQTT() {
 		try {
-			clientPublicador = new MqttClient(GlobalConstants.BROKER, MqttClient.generateClientId());
+			clientPublicador = new MqttClient(GlobalConstants.BROKER_MQTT, MqttClient.generateClientId());
 			MqttConnectOptions options = new MqttConnectOptions();
 			options.setAutomaticReconnect(true);
 			options.setCleanSession(false);
