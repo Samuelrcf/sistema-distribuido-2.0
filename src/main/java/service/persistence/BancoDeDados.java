@@ -51,7 +51,7 @@ public class BancoDeDados {
 
 	private void lidarComConexao(Socket socket) {
 		try (BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-				PrintWriter out = new PrintWriter(socket.getOutputStream(), true)) {
+			PrintWriter out = new PrintWriter(socket.getOutputStream(), true)) {
 			String linhaRecebida = in.readLine();
 
 			if (linhaRecebida != null && !linhaRecebida.isBlank()) {

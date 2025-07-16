@@ -86,7 +86,7 @@ public class CentroDeDados implements MqttCallback {
 
 	private void iniciarPublicadorMQTT() {
 		try {
-			clientPublicador = new MqttClient(GlobalConstants.BROKER_MQTT, MqttClient.generateClientId());
+			clientPublicador = new MqttClient(GlobalConstants.BROKER_MQTT, "centro-de-dados-publicador");
 			MqttConnectOptions options = new MqttConnectOptions();
 			options.setAutomaticReconnect(true);
 			options.setCleanSession(false);
@@ -124,7 +124,7 @@ public class CentroDeDados implements MqttCallback {
 		try {
 			if (clientPublicador != null && clientPublicador.isConnected()) {
 				MqttMessage msg = new MqttMessage(dado.getBytes());
-				msg.setQos(0);
+				msg.setQos(1);
 
 				clientPublicador.publish("dados_processados/todos", msg);
 
@@ -206,22 +206,6 @@ public class CentroDeDados implements MqttCallback {
 		}
 	}
 
-	public void encerrar() {
-		try {
-			if (client != null && client.isConnected())
-				client.disconnect();
-			if (clientPublicador != null && clientPublicador.isConnected())
-				clientPublicador.disconnect();
-			if (rabbitChannel != null && rabbitChannel.isOpen())
-				rabbitChannel.close();
-			if (rabbitConnection != null && rabbitConnection.isOpen())
-				rabbitConnection.close();
-		} catch (Exception e) {
-			registrarLog("Erro ao encerrar conexões: " + e.getMessage());
-			System.out.println("Erro ao encerrar conexões: " + e.getMessage());
-		}
-	}
-
 	private void registrarLog(String mensagem) {
 		try {
 			File logDir = new File("logs");
@@ -229,9 +213,9 @@ public class CentroDeDados implements MqttCallback {
 				logDir.mkdirs();
 			}
 
-			try (FileWriter fw = new FileWriter("logs/centro_de_dados.log", true);
-					BufferedWriter bw = new BufferedWriter(fw);
-					PrintWriter out = new PrintWriter(bw)) {
+			try (FileWriter fw = new FileWriter("logs/centro_de_dados.txt", true);
+				BufferedWriter bw = new BufferedWriter(fw);
+				PrintWriter out = new PrintWriter(bw)) {
 				String timestamp = java.time.LocalDateTime.now().toString();
 				out.println("[" + timestamp + "] " + mensagem);
 			}
