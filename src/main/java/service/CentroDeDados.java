@@ -49,11 +49,11 @@ public class CentroDeDados implements MqttCallback {
 			MqttConnectOptions options = new MqttConnectOptions();
 			options.setAutomaticReconnect(true);
 			options.setCleanSession(false);
-			options.setKeepAliveInterval(10);
+			options.setKeepAliveInterval(5);
 			options.setConnectionTimeout(5);
 			client.setCallback(this);
 			client.connect(options);
-			client.subscribe("dados_climaticos"); // assina todos os sub-tópicos
+			client.subscribe("dados_climaticos");
 			System.out.println("Centro de Dados inscrito nos tópicos.");
 			registrarLog("Centro de Dados se inscreveu no tópico MQTT [dados_climaticos] para recebimento de dados.");
 		} catch (MqttException e) {

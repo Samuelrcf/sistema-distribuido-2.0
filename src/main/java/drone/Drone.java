@@ -27,7 +27,7 @@ public class Drone implements Runnable {
 		MqttConnectOptions options = new MqttConnectOptions();
 		options.setAutomaticReconnect(true);
 		options.setCleanSession(false);
-		options.setKeepAliveInterval(10);
+		options.setKeepAliveInterval(5);
 		options.setConnectionTimeout(5);
 		client.connect(options);
 	}
@@ -38,9 +38,9 @@ public class Drone implements Runnable {
 		try {
 			while (running) {
 				try {
-					if (!client.isConnected()) { // em vez de implementar o callback, faço manualmente
+					if (!client.isConnected()) { 
 						System.out.println("Drone " + regiao + " desconectado. Aguardando reconexão...");
-						TimeUnit.SECONDS.sleep(10); // aguarda reconexão automática
+						TimeUnit.SECONDS.sleep(10); 
 						continue;
 					}
 
